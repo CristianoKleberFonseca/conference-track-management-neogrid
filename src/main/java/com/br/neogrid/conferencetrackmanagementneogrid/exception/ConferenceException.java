@@ -1,13 +1,13 @@
 package com.br.neogrid.conferencetrackmanagementneogrid.exception;
 
-public class BusinessException extends Exception {
+public class ConferenceException extends Exception {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	public BusinessException(String message) {
+	public ConferenceException(String message) {
 		super(message);
 	}
 }

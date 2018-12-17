@@ -11,24 +11,23 @@ import java.util.Collections;
 import java.util.GregorianCalendar;
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
 
+import com.br.neogrid.conferencetrackmanagementneogrid.exception.ConferenceException;
 import com.br.neogrid.conferencetrackmanagementneogrid.model.Conference;
 import com.br.neogrid.conferencetrackmanagementneogrid.model.Talk;
 import com.br.neogrid.conferencetrackmanagementneogrid.model.TalksComparator;
 
 @Service
 public class ConferenceService {
-	private static final Logger LOGGER = LogManager.getLogger(ConferenceService.class);
 
 	private int talkIndex;
 	private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("HH:mm a");
 	private Calendar calendar = new GregorianCalendar();
 
-	public void createConference(String filePath, Double totalTimeConference, int minutesFirstTurn,
-			int minutesSecondTurn) {
+	public boolean createConference(String filePath, Double totalTimeConference, int minutesFirstTurn,
+			int minutesSecondTurn) throws ConferenceException {
+		boolean createReturn = false;
 		// Método que irá criar o objeto que representa a conferência.
 		int startTalkIndex = 0;
 		Conference conference = this.buildConference(filePath, totalTimeConference);
@@ -36,10 +35,13 @@ public class ConferenceService {
 		for (int trackCount = 0; trackCount < conference.getQuantityTracks(); trackCount++) {
 			this.scheduling(conference, trackCount, startTalkIndex, minutesFirstTurn, minutesSecondTurn);
 		}
-		this.outputOfTalksIntoTracks(conference.getTalksList());
+		this.outputProcess(conference.getTalksList());
+		createReturn = true;
+		
+		return createReturn;
 	}
 
-	private Conference buildConference(String filePath, Double totalTimeConference) {
+	private Conference buildConference(String filePath, Double totalTimeConference) throws ConferenceException {
 		Conference conference = new Conference();
 		FileInputStream fileInputStream = null;
 		BufferedReader bufferedReader = null;
@@ -51,6 +53,7 @@ public class ConferenceService {
 			int count = 0;
 
 			while ((fileLine = bufferedReader.readLine()) != null) {
+
 				if (fileLine.length() < 2 || fileLine.isEmpty()) {
 					continue;
 				}
@@ -70,6 +73,9 @@ public class ConferenceService {
 						conference.getTotalTimeProposedConference() + talk.getMinutes());
 				conference.getTalksList().add(talk);
 			}
+			if(count == 0) {
+				throw new ConferenceException("File is empty.");
+			}
 			conference.setTotalTalks(count);
 			conference.setQuantityTracks(this.calculateQuantityTracks(
 					Double.valueOf(conference.getTotalTimeProposedConference()), totalTimeConference));
@@ -77,16 +83,16 @@ public class ConferenceService {
 			Collections.sort(conference.getTalksList(), new TalksComparator());
 
 		} catch (FileNotFoundException ex) {
-			ConferenceService.LOGGER.error(ex.getMessage());
+			throw new ConferenceException("File not exists.");
 		} catch (IOException ex) {
-			ConferenceService.LOGGER.error(ex.getMessage());
-		} catch (Exception ex) {
-			ConferenceService.LOGGER.error(ex.getMessage());
+			throw new ConferenceException("Error creating the file.");
 		} finally {
 			try {
-				bufferedReader.close();
+				if(bufferedReader != null) {
+					bufferedReader.close();
+				}
 			} catch (IOException ex) {
-				ConferenceService.LOGGER.error(ex.getMessage());
+				throw new ConferenceException("Erro clossing the file.");
 			}
 		}
 
@@ -144,7 +150,7 @@ public class ConferenceService {
 		this.talkIndex++;
 	}
 
-	private void outputOfTalksIntoTracks(List<Talk> talksList) {
+	private void outputProcess(List<Talk> talksList) {
 
 		System.out.println("Test Output :");
 		System.out.println("");
